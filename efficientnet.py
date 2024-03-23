@@ -15,10 +15,11 @@ transform = transforms.Compose([
 ])
 
 # Custom dataset class for training
+# load the training images, train labels
 class CustomDataset(Dataset):
-    def __init__(self, annotations_file, img_dir, transform=None):
+    def __init__(self, annotations_file, train, transform=None):
         self.img_paths = [line.strip() for line in open(annotations_file)]
-        self.img_dir = img_dir
+        self.img_dir = train
         self.transform = transform
 
     def __len__(self):
@@ -35,7 +36,7 @@ class CustomDataset(Dataset):
         annotation = np.array([0.5, 0.5, 0.5, 0.5])  # Placeholder for demonstration
         return image, annotation
 
-# Define the model architecture for bounding box regression
+# Model architecture for bounding box regression
 class BoundingBoxModel(nn.Module):
     def __init__(self):
         super(BoundingBoxModel, self).__init__()
