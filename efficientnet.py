@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms, models
+from torchvision.models.efficientnet import EfficientNet_B0_Weights
 import os
 from PIL import Image
 import numpy as np
@@ -49,7 +50,7 @@ class BoundingBoxModel(nn.Module):
         return x
 
 # Define the training function
-def train_model(model, train_loader, criterion, optimizer, num_epochs=10):
+def train_model(model, train_loader, criterion, optimizer, device, num_epochs=10):
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
@@ -90,7 +91,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     # Train the model
-    train_model(model, train_loader, criterion, optimizer)
+    train_model(model, train_loader, criterion, device, optimizer)
 
 if __name__ == '__main__':
     main()
