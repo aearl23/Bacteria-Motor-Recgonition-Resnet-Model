@@ -7,6 +7,7 @@ from torchvision.models.efficientnet import EfficientNet_B0_Weights
 import os
 from PIL import Image
 import numpy as np
+import pandas as pd
 
 # Define transformations for data preprocessing
 transform = transforms.Compose([
@@ -17,9 +18,11 @@ transform = transforms.Compose([
 
 # Custom dataset class for training
 # load the training images, train labels
+train_labels = 'train_labels.csv'
+
 class CustomDataset(Dataset):
-    def __init__(self, annotations_file, train, transform=None):
-        self.img_paths = [line.strip() for line in open(annotations_file)]
+    def __init__(self, train_labels, train, transform=None):
+        self.data = pd.read_csv(train_labels)
         self.img_dir = train
         self.transform = transform
 
@@ -27,14 +30,26 @@ class CustomDataset(Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, idx):
-        img_path = os.path.join(self.img_dir, self.img_paths[idx])
+        img_path = os.path.join(self.img_dir, self.data.iloc[idx, 0])
         image = Image.open(img_path).convert('RGB')
-        if self.transform:
+        
+        # Load bounding box annotations in csv format 
+        x_center = self.data.iloc[idx, 1]
+        y_center = self.data.iloc[idx, 2]
+        width = self.data.iloc[idx, 3]
+        height = self.data.iloc[idx, 4]
+        motor_visible = self.data.iloc[idx, 5]
+
+        # normalize annotations
+        # if motor is not visible, set box to [-1,-1,-1,-1]
+        if motor_visible == 0:
+            annotation = np.array([-1,-1,-1,-1])
+        else:
+            annotation = np.array([x_center, y_center, width, height])  # Placeholder for demonstration
+        if self.transform: 
             image = self.transform(image)
         
-        # Load bounding box annotations and normalize them
-        # Assuming the format is [x_center, y_center, width, height]
-        annotation = np.array([0.5, 0.5, 0.5, 0.5])  # Placeholder for demonstration
+        
         return image, annotation
 
 # Model architecture for bounding box regression
@@ -71,11 +86,12 @@ def train_model(model, train_loader, criterion, optimizer, device, num_epochs=10
         print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {epoch_loss:.4f}')
     print('Training complete.')
 
-# Main function
+# Main function calling all parts 
+    
 def main():
     # Dataset paths
-    train_annotations_file = 'train_annotations.txt'
-    train_img_dir = 'train_images'
+    train_annotations_file = 'train_labels.csv'
+    train_img_dir = 'train'
     
     # Initialize dataset and data loader
     train_dataset = CustomDataset(train_annotations_file, train_img_dir, transform)
