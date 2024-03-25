@@ -27,7 +27,7 @@ class CustomDataset(Dataset):
         self.transform = transform
 
     def __len__(self):
-        return len(self.img_paths)
+        return len(self.data)
 
     def __getitem__(self, idx):
         img_path = os.path.join(self.img_dir, self.data.iloc[idx, 0])
@@ -54,10 +54,11 @@ class CustomDataset(Dataset):
 
 # Model architecture for bounding box regression
 class BoundingBoxModel(nn.Module):
-    def __init__(self):
+    def __init__(self, num_classes=1000):
         super(BoundingBoxModel, self).__init__()
-        self.model = models.efficientnet_b0(pretrained=True)
-        self.fc = nn.Linear(self.model._fc.in_features, 4)  # Output: [x_center, y_center, width, height]
+        self.model = models.efficientnet_b5(pretrained=True)
+        self.model.classifier = nn.Linear(self.model._fc.in_features, num_classes) # Replace the fully connected layer to match the numnber of output features 
+        self.fc = nn.Linear(num_classes, 4) #output: [x_center, y_center, width, height]
 
     def forward(self, x):
         x = self.model(x)
