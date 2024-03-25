@@ -8,6 +8,7 @@ import os
 from PIL import Image
 import numpy as np
 import pandas as pd
+import torchvision
 
 # Define transformations for data preprocessing
 transform = transforms.Compose([
@@ -18,12 +19,11 @@ transform = transforms.Compose([
 
 # Custom dataset class for training
 # load the training images, train labels
-train_labels = 'train_labels.csv'
 
 class CustomDataset(Dataset):
-    def __init__(self, train_labels, train, transform=None):
-        self.data = pd.read_csv(train_labels)
-        self.img_dir = train
+    def __init__(self, annotations_file, img_dir, transform=None):
+        self.data = pd.read_csv(annotations_file)
+        self.img_dir = img_dir
         self.transform = transform
 
     def __len__(self):
@@ -54,19 +54,24 @@ class CustomDataset(Dataset):
 
 # Model architecture for bounding box regression
 class BoundingBoxModel(nn.Module):
-    def __init__(self, num_classes=1000):
+    def __init__(self):
         super(BoundingBoxModel, self).__init__()
         self.model = models.efficientnet_b5(pretrained=True)
-        self.model.classifier = nn.Linear(self.model._fc.in_features, num_classes) # Replace the fully connected layer to match the numnber of output features 
-        self.fc = nn.Linear(num_classes, 4) #output: [x_center, y_center, width, height]
+        
+        #last layer of input features from classifier 
+        num_ftrs = self.model.classifier[-1].in_features
+        
+        #Replace last FC layer with a new one 
+        self.model.classifier[-1] = nn.Linear(num_ftrs, 5) # Replace the fully connected layer to match the numnber of output features 
 
     def forward(self, x):
         x = self.model(x)
-        x = self.fc(x)
+        x = self.classifier(x)
         return x
 
 # Define the training function
 def train_model(model, train_loader, criterion, optimizer, device, num_epochs=10):
+    model.to(device)
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
