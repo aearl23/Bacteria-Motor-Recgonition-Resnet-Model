@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms, models
-from torchvision.models.efficientnet import EfficientNet_B0_Weights, EfficientNet_B5_Weights
+from torchvision.models.efficientnet import EfficientNet_B5_Weights
 import os
 from PIL import Image
 import numpy as np
