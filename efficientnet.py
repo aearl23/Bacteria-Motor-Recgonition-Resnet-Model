@@ -134,7 +134,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     # Train the model
-    train_model(model, train_loader, criterion, optimizer, device)
+    train_model(model, train_loader, criterion, optimizer, device, num_epochs=10)
 
 if __name__ == '__main__':
     main()
