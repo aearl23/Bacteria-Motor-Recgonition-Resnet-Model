@@ -69,10 +69,26 @@ class BoundingBoxModel(nn.Module):
         x = self.classifier(x)
         return x
 
+# global variables for saving progress
+checkpoint_dir = os.getcwd()
+checkpoint_path = os.path.join(checkpoint_dir, 'model_checkpoint.pth')
+
+# Load saved checkpoints
+def load_checkpoint(model, optimizer):
+    if os.path.exists(checkpoint_path):
+        checkpoint = torch.load(checkpoint_path)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        start_epoch = checkpoint['epoch'] + 1
+    else:
+        start_epoch = 0
+    return start_epoch
+
 # Define the training function
 def train_model(model, train_loader, criterion, optimizer, device, num_epochs=10):
+    start_epoch = load_checkpoint(model, optimizer)
     model.to(device)
-    for epoch in range(num_epochs):
+    for epoch in range(start_epoch, num_epochs):
         model.train()
         running_loss = 0.0
         for images, annotations in train_loader:
@@ -90,6 +106,11 @@ def train_model(model, train_loader, criterion, optimizer, device, num_epochs=10
         
         epoch_loss = running_loss / len(train_loader.dataset)
         print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {epoch_loss:.4f}')
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+        }, checkpoint_path)
     print('Training complete.')
 
 # Main function calling all parts 
