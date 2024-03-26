@@ -52,24 +52,12 @@ class CustomDataset(Dataset):
 class BoundingBoxModel(nn.Module):
     def __init__(self):
         super(BoundingBoxModel, self).__init__()
-        self.base_model = models.efficientnet_b5(weights=EfficientNet_B5_Weights.DEFAULT)
+        self.model = models.efficientnet_b5(weights=EfficientNet_B5_Weights.DEFAULT)
         
         #last layer of input features from classifier 
-        num_ftrs = self.base_model.classifier[-1].in_features
+        num_ftrs = self.classifier[-1].in_features
         
-        #Replace last FC layer with a new one 
-        # Classification head
-        self.cls_head = nn.Sequential(
-            nn.Dropout(0.2),
-            nn.Linear(num_ftrs, 1),
-            nn.Sigmoid()
-        )
-        
-        # Regression head
-        self.reg_head = nn.Sequential(
-            nn.Dropout(0.2),
-            nn.Linear(num_ftrs, 4)
-        )
+        self.output_head = nn.Linear(num_ftrs, 6)
 
     def forward(self, x):
         x = self.model(x)
@@ -105,7 +93,7 @@ def train_model(model, train_loader, criterion, optimizer, device, num_epochs=10
             optimizer.zero_grad()
             
             outputs = model(images)
-            loss = criterion(outputs, annotations)
+            loss = criterion(outputs[:, 1:], annotations[:, :5])
             loss.backward()
             optimizer.step()
             
