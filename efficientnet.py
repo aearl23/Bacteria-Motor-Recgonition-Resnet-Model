@@ -41,7 +41,7 @@ class CustomDataset(Dataset):
         height = self.data.iloc[idx, 4]
         motor_visible = self.data.iloc[idx, 5]
 
-        annotation = [x_center, y_center, width, height, motor_visible]
+        annotation = torch.tensor([x_center, y_center, width, height, motor_visible])
 
         if self.transform: 
             image = self.transform(image)
