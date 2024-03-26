@@ -8,7 +8,7 @@ import os
 from PIL import Image
 import numpy as np
 import pandas as pd
-import torchvision
+from torch.nn.functional import smooth_l1_loss as SmoothL1Loss
 
 # Define transformations for data preprocessing
 transform = transforms.Compose([
