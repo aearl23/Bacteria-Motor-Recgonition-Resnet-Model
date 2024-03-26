@@ -56,6 +56,7 @@ class BoundingBoxModel(nn.Module):
         
         #last layer of input features from classifier 
         num_ftrs = self.model.classifier[-1].in_features
+        self.model.classifier[-1] = nn.Identity()  # Remove the last layer
         
         self.output_head = nn.Linear(num_ftrs, 6)
 
