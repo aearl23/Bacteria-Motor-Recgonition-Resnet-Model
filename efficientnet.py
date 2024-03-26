@@ -55,13 +55,13 @@ class BoundingBoxModel(nn.Module):
         self.model = models.efficientnet_b5(weights=EfficientNet_B5_Weights.DEFAULT)
         
         #last layer of input features from classifier 
-        num_ftrs = self.classifier[-1].in_features
+        num_ftrs = self.model.classifier[-1].in_features
         
         self.output_head = nn.Linear(num_ftrs, 6)
 
     def forward(self, x):
         x = self.model(x)
-        x = self.classifier(x)
+        x = self.output_head(x)
         return x
 
 # global variables for saving progress
