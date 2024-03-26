@@ -31,6 +31,7 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, idx):
         img_path = os.path.join(self.img_dir, self.data.iloc[idx, 0])
+        image_name = self.data.iloc[idx, 0]
         image = Image.open(img_path).convert('RGB')
         
         # Load bounding box annotations in csv format 
@@ -42,27 +43,36 @@ class CustomDataset(Dataset):
 
         # normalize annotations
         # if motor is not visible, set box to [-1,-1,-1,-1]
-        if motor_visible == 0:
-            annotation = np.array([-1,-1,-1,-1])
-        else:
-            annotation = np.array([x_center, y_center, width, height])  # Placeholder for demonstration
+        annotation = [x_center, y_center, width, height, motor_visible]
+        
         if self.transform: 
             image = self.transform(image)
         
         
-        return image, annotation
+        return image, image_name, annotation
 
 # Model architecture for bounding box regression
 class BoundingBoxModel(nn.Module):
     def __init__(self):
         super(BoundingBoxModel, self).__init__()
-        self.model = models.efficientnet_b5(weights=EfficientNet_B5_Weights.DEFAULT)
+        self.base_model = models.efficientnet_b5(weights=EfficientNet_B5_Weights.DEFAULT)
         
         #last layer of input features from classifier 
-        num_ftrs = self.model.classifier[-1].in_features
+        num_ftrs = self.base_model.classifier[-1].in_features
         
         #Replace last FC layer with a new one 
-        self.model.classifier[-1] = nn.Linear(num_ftrs, 5) # Replace the fully connected layer to match the numnber of output features 
+        # Classification head
+        self.cls_head = nn.Sequential(
+            nn.Dropout(0.2),
+            nn.Linear(num_ftrs, 1),
+            nn.Sigmoid()
+        )
+        
+        # Regression head
+        self.reg_head = nn.Sequential(
+            nn.Dropout(0.2),
+            nn.Linear(num_ftrs, 4)
+        )
 
     def forward(self, x):
         x = self.model(x)
