@@ -55,15 +55,18 @@ class BoundingBoxModel(nn.Module):
         self.model = models.efficientnet_b5(weights=EfficientNet_B5_Weights.DEFAULT)
         
         #last layer of input features from classifier 
-        num_ftrs = self.model.classifier[-1].in_features
-        self.model.classifier[-1] = nn.Identity()  # Remove the last layer
-        
-        self.output_head = nn.Linear(num_ftrs, 6)
+        num_ftrs = self.model.classifier[-1].out_features
+        # probability of motor presence
+        self.classification_head = nn.Linear(num_ftrs, 1)
+        # bounding box coordinates and dimensions
+        self.regression_head = nn.Linear(num_ftrs, 4)
 
     def forward(self, x):
         x = self.model(x)
-        x = self.output_head(x)
-        return x
+        x = x.view(x.size(0), -1)
+        motor_presence = self.classification_head(x)
+        bbox_params = self.regression_head(x)
+        return motor_presence, bbox_params
 
 # global variables for saving progress
 checkpoint_dir = os.getcwd()
@@ -81,27 +84,43 @@ def load_checkpoint(model, optimizer):
     return start_epoch
 
 # Define the training function
-def train_model(model, train_loader, criterion, optimizer, device, num_epochs=10):
+def train_model(model, train_loader, criterion_classification, criterion_regression, optimizer, device, num_epochs=10):
     start_epoch = load_checkpoint(model, optimizer)
     model.to(device)
     for epoch in range(start_epoch, num_epochs):
         model.train()
-        running_loss = 0.0
-        for images, image_names, annotations in train_loader:
+        running_loss_classification = 0.0
+        running_loss_regression = 0.0
+        num_samples = 0  # Track the number of samples used for training
+        
+        for images, _, annotations in train_loader:
             images = images.to(device)
             annotations = annotations.to(device)
             
             optimizer.zero_grad()
+
+            motor_presence, bbox_params = model(images)
+
+            target_classification = annotations[:, -1].unsqueeze(1)  # Extract motor visibility as the target
+            loss_classification = criterion_classification(motor_presence, target_classification.float())
             
-            outputs = model(images)
-            loss = criterion(outputs[:, 1:], annotations[:, :5])
+            target_regression = annotations[:, :-1]  # Extract bounding box parameters as the target
+            loss_regression = criterion_regression(bbox_params, target_regression.float())
+
+            loss = loss_classification + loss_regression
+
             loss.backward()
             optimizer.step()
             
-            running_loss += loss.item() * images.size(0)
+            running_loss_classification += loss_classification.item()  # Update running classification loss
+            running_loss_regression += loss_regression.item()  # Update running regression loss
+            
+            num_samples += images.size(0)  # Update the number of samples used for training
         
-        epoch_loss = running_loss / len(train_loader.dataset)
-        print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {epoch_loss:.4f}')
+        epoch_loss_classification = running_loss_classification / num_samples if num_samples > 0 else 0  # Calculate epoch classification loss
+        epoch_loss_regression = running_loss_regression / num_samples if num_samples > 0 else 0  # Calculate epoch regression loss
+        
+        print(f'Epoch [{epoch + 1}/{num_epochs}], Classification Loss: {epoch_loss_classification:.4f}, Regression Loss: {epoch_loss_regression:.4f}')
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
@@ -125,12 +144,12 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-    # Define loss function and optimizer
-    criterion = nn.SmoothL1Loss()
+    criterion_classification = nn.BCEWithLogitsLoss()
+    criterion_regression = nn.SmoothL1Loss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     # Train the model
-    train_model(model, train_loader, criterion, optimizer, device, num_epochs=10)
+    train_model(model, train_loader, criterion_classification, criterion_regression, optimizer, device, num_epochs=10)
 
 if __name__ == '__main__':
     main()
