@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms, models
-from torchvision.models.efficientnet import EfficientNet_B0_Weights
+from torchvision.models.efficientnet import EfficientNet_B0_Weights, EfficientNet_B5_Weights
 import os
 from PIL import Image
 import numpy as np
@@ -56,7 +56,7 @@ class CustomDataset(Dataset):
 class BoundingBoxModel(nn.Module):
     def __init__(self):
         super(BoundingBoxModel, self).__init__()
-        self.model = models.efficientnet_b5(pretrained=True)
+        self.model = models.efficientnet_b5(weights=EfficientNet_B5_Weights.DEFAULT)
         
         #last layer of input features from classifier 
         num_ftrs = self.model.classifier[-1].in_features
@@ -113,7 +113,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     # Train the model
-    train_model(model, train_loader, criterion, device, optimizer)
+    train_model(model, train_loader, criterion, optimizer, device)
 
 if __name__ == '__main__':
     main()
