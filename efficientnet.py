@@ -41,13 +41,10 @@ class CustomDataset(Dataset):
         height = self.data.iloc[idx, 4]
         motor_visible = self.data.iloc[idx, 5]
 
-        # normalize annotations
-        # if motor is not visible, set box to [-1,-1,-1,-1]
         annotation = [x_center, y_center, width, height, motor_visible]
-        
+
         if self.transform: 
             image = self.transform(image)
-        
         
         return image, image_name, annotation
 
