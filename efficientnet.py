@@ -125,7 +125,7 @@ def main():
     model.to(device)
 
     # Define loss function and optimizer
-    criterion = nn.MSELoss()
+    criterion = nn.SmoothL1Loss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     # Train the model
